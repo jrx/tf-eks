@@ -1,11 +1,11 @@
+terraform {
+  required_version = ">= 0.12.0"
+  backend "remote" {}
+}
+
 provider "aws" {
   version = ">= 2.28.1"
   region  = var.region
-}
-
-terraform {
-  required_version = ">= 0.12"
-  backend "remote" {}
 }
 
 provider "random" {
@@ -17,10 +17,6 @@ provider "local" {
 }
 
 provider "null" {
-  version = "~> 2.1"
-}
-
-provider "template" {
   version = "~> 2.1"
 }
 
@@ -41,10 +37,6 @@ provider "kubernetes" {
 }
 
 data "aws_availability_zones" "available" {
-}
-
-locals {
-  cluster_name = "jrx-test-eks-${random_string.suffix.result}"
 }
 
 resource "random_string" "suffix" {
@@ -112,14 +104,13 @@ data "terraform_remote_state" "vpc" {
 
 module "eks" {
   source       = "terraform-aws-modules/eks/aws"
-  version      = "11.0.0"
-  cluster_name = local.cluster_name
+  version      = "12.0.0"
+  cluster_name = var.cluster_name
   subnets      = data.terraform_remote_state.vpc.outputs.aws_private_subnets
 
   tags = {
-    Environment = "jrx-test"
-    GithubRepo  = "terraform-aws-eks"
-    GithubOrg   = "terraform-aws-modules"
+    Owner = var.owner
+    # Keep = ""
   }
 
   vpc_id = data.terraform_remote_state.vpc.outputs.aws_vpc_id
