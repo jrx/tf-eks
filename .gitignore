@@ -10,3 +10,4 @@ override.tf.json
 *_override.tf.json
 backend.hcl
 *.rli
+.terraform.lock.hcl

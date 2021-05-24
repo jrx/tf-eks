@@ -22,3 +22,8 @@ output "region" {
   description = "AWS region."
   value       = var.region
 }
+
+output "aws_kms_key" {
+  description = "AWS KMS id"
+  value       = aws_kms_key.vault.id
+}

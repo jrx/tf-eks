@@ -4,20 +4,7 @@ terraform {
 }
 
 provider "aws" {
-  version = ">= 2.28.1"
-  region  = var.region
-}
-
-provider "random" {
-  version = "~> 2.1"
-}
-
-provider "local" {
-  version = "~> 1.2"
-}
-
-provider "null" {
-  version = "~> 2.1"
+  region = var.region
 }
 
 data "aws_eks_cluster" "cluster" {
@@ -33,7 +20,6 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
   token                  = data.aws_eks_cluster_auth.cluster.token
   load_config_file       = false
-  version                = "~> 1.11"
 }
 
 data "aws_availability_zones" "available" {
@@ -42,6 +28,15 @@ data "aws_availability_zones" "available" {
 resource "random_string" "suffix" {
   length  = 8
   special = false
+}
+
+resource "aws_kms_key" "vault" {
+  description             = "Vault unseal key"
+  deletion_window_in_days = 10
+
+  tags = {
+    Name = "${var.cluster_name}-vault-key"
+  }
 }
 
 data "terraform_remote_state" "vpc" {
@@ -56,10 +51,13 @@ data "terraform_remote_state" "vpc" {
 }
 
 module "eks" {
-  source       = "terraform-aws-modules/eks/aws"
-  version      = "12.0.0"
-  cluster_name = var.cluster_name
-  subnets      = data.terraform_remote_state.vpc.outputs.aws_private_subnets
+  source                       = "terraform-aws-modules/eks/aws"
+  version                      = "16.0.0"
+  cluster_version              = "1.19"
+  cluster_name                 = var.cluster_name
+  subnets                      = data.terraform_remote_state.vpc.outputs.aws_private_subnets
+  manage_cluster_iam_resources = false
+  cluster_iam_role_name        = "jrx-consul-eks"
 
   tags = {
     Owner = var.owner
@@ -71,18 +69,18 @@ module "eks" {
   worker_groups = [
     {
       name                          = "worker-group-1"
-      instance_type                 = "t2.small"
+      instance_type                 = "m5.2xlarge"
       additional_userdata           = "echo foo bar"
-      asg_desired_capacity          = 2
+      asg_desired_capacity          = 3
       additional_security_group_ids = [aws_security_group.worker_group_mgmt_one.id]
     },
-    {
-      name                          = "worker-group-2"
-      instance_type                 = "t2.medium"
-      additional_userdata           = "echo foo bar"
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
-      asg_desired_capacity          = 1
-    },
+    # {
+    #   name                          = "worker-group-2"
+    #   instance_type                 = "t3.medium"
+    #   additional_userdata           = "echo foo bar"
+    #   additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
+    #   asg_desired_capacity          = 1
+    # },
   ]
 
   worker_additional_security_group_ids = [aws_security_group.all_worker_mgmt.id]
