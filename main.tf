@@ -52,11 +52,12 @@ data "terraform_remote_state" "vpc" {
 
 module "eks" {
   source                       = "terraform-aws-modules/eks/aws"
-  version                      = "16.0.0"
-  cluster_version              = "1.19"
+  version                      = "17.1.0"
+  cluster_version              = "1.20"
   cluster_name                 = var.cluster_name
   subnets                      = data.terraform_remote_state.vpc.outputs.aws_private_subnets
   manage_cluster_iam_resources = false
+  manage_worker_iam_resources  = true
   cluster_iam_role_name        = "jrx-consul-eks"
 
   tags = {
@@ -76,10 +77,10 @@ module "eks" {
     },
     # {
     #   name                          = "worker-group-2"
-    #   instance_type                 = "t3.medium"
+    #   instance_type                 = "m5.2xlarge"
     #   additional_userdata           = "echo foo bar"
     #   additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
-    #   asg_desired_capacity          = 1
+    #   asg_desired_capacity          = 3
     # },
   ]
 
