@@ -55,4 +55,15 @@ resource "aws_security_group" "all_worker_mgmt" {
       "192.168.0.0/16",
     ]
   }
+
+  # Mesh-Gateway for Admin-Partitions
+  ingress {
+    from_port = 0
+    to_port   = 65535
+    protocol  = "tcp"
+
+    cidr_blocks = [
+      "10.0.0.0/16",
+    ]
+  }
 }

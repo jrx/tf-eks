@@ -52,8 +52,8 @@ data "terraform_remote_state" "vpc" {
 
 module "eks" {
   source                       = "terraform-aws-modules/eks/aws"
-  version                      = "17.1.0"
-  cluster_version              = "1.20"
+  version                      = "17.24.0"
+  cluster_version              = "1.21"
   cluster_name                 = var.cluster_name
   subnets                      = data.terraform_remote_state.vpc.outputs.aws_private_subnets
   manage_cluster_iam_resources = false
