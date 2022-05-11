@@ -32,38 +32,22 @@ resource "aws_security_group" "all_worker_mgmt" {
   name_prefix = "all_worker_management"
   vpc_id      = data.terraform_remote_state.vpc.outputs.aws_vpc_id
 
+  # Inter-cluster connections
   ingress {
-    from_port = 22
-    to_port   = 22
-    protocol  = "tcp"
-
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = [
       "10.0.0.0/8",
       "172.16.0.0/12",
       "192.168.0.0/16",
+      "172.25.16.0/20",
     ]
   }
-
-  ingress {
-    from_port = 8301
-    to_port   = 8301
-    protocol  = "udp"
-
-    cidr_blocks = [
-      "10.0.0.0/8",
-      "172.16.0.0/12",
-      "192.168.0.0/16",
-    ]
-  }
-
-  # Mesh-Gateway for Admin-Partitions
-  ingress {
-    from_port = 0
-    to_port   = 65535
-    protocol  = "tcp"
-
-    cidr_blocks = [
-      "10.0.0.0/16",
-    ]
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
