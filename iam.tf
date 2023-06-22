@@ -36,9 +36,3 @@ resource "aws_iam_policy" "vault-policy" {
   name   = "${var.cluster_name}-vault-policy"
   policy = data.aws_iam_policy_document.vault-kms-unseal.json
 }
-
-resource "aws_iam_policy_attachment" "vault-attach" {
-  name       = "${var.cluster_name}-vault-attach"
-  roles      = [module.eks.worker_iam_role_name]
-  policy_arn = aws_iam_policy.vault-policy.arn
-}

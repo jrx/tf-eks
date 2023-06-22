@@ -6,19 +6,19 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 1.11"
+      version = "~> 2.21.1"
     }
     local = {
       source  = "hashicorp/local"
-      version = "~> 1.2"
+      version = "~> 2.4.0"
     }
     null = {
       source  = "hashicorp/null"
-      version = "~> 2.1"
+      version = "~> 3.2.1"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 2.1"
+      version = "~> 3.5.1"
     }
   }
   required_version = ">= 0.13"
