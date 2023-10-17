@@ -50,11 +50,12 @@ data "terraform_remote_state" "vpc" {
 }
 
 module "eks" {
-  source                         = "terraform-aws-modules/eks/aws"
-  version                        = "19.15.3"
-  cluster_version                = "1.27"
-  cluster_name                   = var.cluster_name
-  cluster_endpoint_public_access = true
+  source                          = "terraform-aws-modules/eks/aws"
+  version                         = "19.15.3"
+  cluster_version                 = "1.27"
+  cluster_name                    = var.cluster_name
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = true
 
   cluster_addons = {
     coredns = {
@@ -79,6 +80,23 @@ module "eks" {
   manage_aws_auth_configmap = true
   create_iam_role           = false
   iam_role_arn              = var.iam_role
+
+  cluster_security_group_additional_rules = {
+    ingress = {
+      description = "inter-cluster connections"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "172.20.0.0/16",
+        "172.25.16.0/20",
+        "192.168.0.0/16",
+      ]
+      type = "ingress"
+    }
+  }
 
   node_security_group_enable_recommended_rules = true
   node_security_group_additional_rules = {
