@@ -14,6 +14,10 @@ variable "region" {
   default = "eu-north-1"
 }
 
+variable "autoscaling_role" {
+  default = ""
+}
+
 variable "iam_role" {
-  default = "arn:aws:iam::996575707302:role/jrx-consul-eks"
+  default = ""
 }

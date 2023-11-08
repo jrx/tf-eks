@@ -51,8 +51,8 @@ data "terraform_remote_state" "vpc" {
 
 module "eks" {
   source                          = "terraform-aws-modules/eks/aws"
-  version                         = "19.15.3"
-  cluster_version                 = "1.27"
+  version                         = "19.19.0"
+  cluster_version                 = "1.28"
   cluster_name                    = var.cluster_name
   cluster_endpoint_private_access = true
   cluster_endpoint_public_access  = true
@@ -211,7 +211,7 @@ module "ebs_kms_key" {
 
   key_service_roles_for_autoscaling = [
     # required for the ASG to manage encrypted volumes for nodes
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+    var.autoscaling_role,
     # required for the cluster / persistentvolume-controller to create encrypted PVCs
     var.iam_role
   ]
