@@ -42,20 +42,23 @@ data "terraform_remote_state" "vpc" {
   backend = "remote"
   config = {
     workspaces = {
-      name = "net-dev"
+      name = "net"
     }
     hostname     = "app.terraform.io"
-    organization = "jrx"
+    organization = "jrxhc"
   }
 }
 
 module "eks" {
   source                          = "terraform-aws-modules/eks/aws"
-  version                         = "19.19.0"
-  cluster_version                 = "1.28"
+  version                         = "~> 20.0"
+  cluster_version                 = "1.29"
   cluster_name                    = var.cluster_name
   cluster_endpoint_private_access = true
   cluster_endpoint_public_access  = true
+
+  enable_cluster_creator_admin_permissions = true
+  enable_efa_support                       = true
 
   cluster_addons = {
     coredns = {
@@ -72,14 +75,12 @@ module "eks" {
     }
   }
 
-  vpc_id     = data.terraform_remote_state.vpc.outputs.aws_vpc_id
-  subnet_ids = data.terraform_remote_state.vpc.outputs.aws_private_subnets
+  vpc_id                   = data.terraform_remote_state.vpc.outputs.aws_vpc_id
+  subnet_ids               = data.terraform_remote_state.vpc.outputs.aws_private_subnets
+  control_plane_subnet_ids = data.terraform_remote_state.vpc.outputs.aws_public_subnets
 
-  # Self managed node groups will not automatically create the aws-auth configmap so we need to
-  create_aws_auth_configmap = true
-  manage_aws_auth_configmap = true
-  create_iam_role           = false
-  iam_role_arn              = var.iam_role
+  create_iam_role = false
+  iam_role_arn    = var.iam_role
 
   cluster_security_group_additional_rules = {
     ingress = {
@@ -119,6 +120,13 @@ module "eks" {
   tags = {
     Owner = var.owner
     # Keep = ""
+  }
+
+  self_managed_node_group_defaults = {
+    autoscaling_group_tags = {
+      "k8s.io/cluster-autoscaler/enabled" : true,
+      "k8s.io/cluster-autoscaler/${var.cluster_name}" : "owned",
+    }
   }
 
   self_managed_node_groups = {
@@ -200,7 +208,7 @@ module "eks" {
 
 module "ebs_kms_key" {
   source  = "terraform-aws-modules/kms/aws"
-  version = "~> 1.5"
+  version = "~> 2.0"
 
   description = "Customer managed key to encrypt EKS managed node group volumes"
 
