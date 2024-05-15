@@ -28,6 +28,7 @@ data "aws_iam_policy_document" "vault-kms-unseal" {
       "kms:Decrypt",
       "kms:DescribeKey",
       "ec2:DescribeInstances",
+      "iam:GetRole",
     ]
   }
 }
