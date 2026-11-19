@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "skills": {
+    "refactor-module": {
+      "source": "hashicorp/agent-skills",
+      "commit": "5e30fa5c867ba6777c37e4206babfd08049c396f",
+      "sourceType": "github",
+      "skillPath": "plugins/terraform/skills/refactor-module/SKILL.md",
+      "computedHash": "64ebe229f5556a162308cbdf7c240d36de58dd2a0106734fa23f946a2c83864d"
+    },
+    "terraform-style-guide": {
+      "source": "hashicorp/agent-skills",
+      "commit": "5e30fa5c867ba6777c37e4206babfd08049c396f",
+      "sourceType": "github",
+      "skillPath": "plugins/terraform/skills/terraform-style-guide/SKILL.md",
+      "computedHash": "39a686ad7d71d99e5fbead0a5cbd666c096af8d38d152f7597eb314e5b2b622c"
+    },
+    "terraform-test": {
+      "source": "hashicorp/agent-skills",
+      "commit": "5e30fa5c867ba6777c37e4206babfd08049c396f",
+      "sourceType": "github",
+      "skillPath": "plugins/terraform/skills/terraform-test/SKILL.md",
+      "computedHash": "8c66c1856320d5b74eb54b89f9c2553ff7e5733bfc08135edd922830287d0c0f"
+    }
+  }
+}
