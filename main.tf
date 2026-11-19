@@ -1,5 +1,4 @@
 terraform {
-  required_version = ">= 0.12.0"
   backend "remote" {}
 }
 
@@ -8,20 +7,18 @@ provider "aws" {
 }
 
 data "aws_caller_identity" "current" {}
-data "aws_availability_zones" "available" {}
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-  depends_on = [
-    module.eks.cluster_endpoint
-  ]
-}
+data "aws_partition" "current" {}
 
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+data "aws_iam_session_context" "deployment" {
+  arn = data.aws_caller_identity.current.arn
 
-  token = data.aws_eks_cluster_auth.cluster.token
+  lifecycle {
+    precondition {
+      condition     = startswith(var.autoscaling_role, "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:")
+      error_message = "Supply the default Auto Scaling service-linked role from the same AWS account and partition as the deployment."
+    }
+  }
 }
 
 resource "random_string" "suffix" {
@@ -50,17 +47,29 @@ data "terraform_remote_state" "vpc" {
 }
 
 module "eks" {
-  source                          = "terraform-aws-modules/eks/aws"
-  version                         = "~> 20.0"
-  cluster_version                 = "1.29"
-  cluster_name                    = var.cluster_name
-  cluster_endpoint_private_access = true
-  cluster_endpoint_public_access  = true
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.30.2"
 
-  enable_cluster_creator_admin_permissions = true
-  enable_efa_support                       = true
+  name                         = var.cluster_name
+  kubernetes_version           = "1.37"
+  endpoint_private_access      = true
+  endpoint_public_access       = length(var.cluster_endpoint_public_access_cidrs) > 0
+  endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
 
-  cluster_addons = {
+  enable_cluster_creator_admin_permissions = var.cluster_operator_principal_arn == null
+  access_entries = var.cluster_operator_principal_arn == null ? {} : {
+    operator = {
+      principal_arn = var.cluster_operator_principal_arn
+      policy_associations = {
+        admin = {
+          policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  }
+
+  addons = {
     coredns = {
       most_recent = true
     }
@@ -68,7 +77,8 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent = true
+      before_compute = true
+      most_recent    = true
     }
     aws-ebs-csi-driver = {
       most_recent = true
@@ -82,7 +92,7 @@ module "eks" {
   create_iam_role = false
   iam_role_arn    = var.iam_role
 
-  cluster_security_group_additional_rules = {
+  security_group_additional_rules = {
     ingress = {
       description = "inter-cluster connections"
       from_port   = 0
@@ -122,13 +132,6 @@ module "eks" {
     # Keep = ""
   }
 
-  self_managed_node_group_defaults = {
-    autoscaling_group_tags = {
-      "k8s.io/cluster-autoscaler/enabled" : true,
-      "k8s.io/cluster-autoscaler/${var.cluster_name}" : "owned",
-    }
-  }
-
   self_managed_node_groups = {
     complete = {
       name            = "${var.cluster_name}-eks-node"
@@ -140,13 +143,10 @@ module "eks" {
       max_size     = 7
       desired_size = 3
 
-      pre_bootstrap_user_data = <<-EOT
-        export FOO=bar
-      EOT
-
-      post_bootstrap_user_data = <<-EOT
-        echo "you are free little kubelet!"
-      EOT
+      autoscaling_group_tags = {
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
+      }
 
       instance_type = "m5.2xlarge"
 
@@ -179,22 +179,19 @@ module "eks" {
         instance_metadata_tags      = "disabled"
       }
 
-      create_iam_role          = true
-      iam_role_name            = "${var.cluster_name}-eks-node"
-      iam_role_use_name_prefix = false
-      iam_role_description     = "Self managed node group complete example role"
+      create_iam_instance_profile = true
+      iam_role_name               = "${var.cluster_name}-eks-node"
+      iam_role_use_name_prefix    = false
+      iam_role_description        = "Self managed node group complete example role"
       iam_role_tags = {
         Purpose = "Protector of the kubelet"
       }
       iam_role_additional_policies = {
-        AmazonEC2ContainerRegistryReadOnly = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-        AmazonEBSCSIDriverPolicy           = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-        additional                         = aws_iam_policy.vault-policy.arn
+        AmazonEBSCSIDriverPolicy = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        additional               = aws_iam_policy.vault-policy.arn
       }
 
       timeouts = {
-        create = "80m"
-        update = "80m"
         delete = "80m"
       }
 
@@ -208,19 +205,18 @@ module "eks" {
 
 module "ebs_kms_key" {
   source  = "terraform-aws-modules/kms/aws"
-  version = "~> 2.0"
+  version = "4.2.2"
 
-  description = "Customer managed key to encrypt EKS managed node group volumes"
+  description = "Customer managed key to encrypt EKS self-managed node volumes"
 
   # Policy
   key_administrators = [
-    data.aws_caller_identity.current.arn
+    data.aws_iam_session_context.deployment.issuer_arn
   ]
 
   key_service_roles_for_autoscaling = [
     # required for the ASG to manage encrypted volumes for nodes
     var.autoscaling_role,
-    # required for the cluster / persistentvolume-controller to create encrypted PVCs
     var.iam_role
   ]
 
