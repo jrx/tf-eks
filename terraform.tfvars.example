@@ -1,0 +1,11 @@
+# Replace these example ARNs with existing roles in the deployment account.
+iam_role         = "arn:aws:iam::123456789012:role/platform/EksControlPlane"
+autoscaling_role = "arn:aws:iam::123456789012:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+
+# Replace this documentation-only IP with your laptop network's public egress IPv4.
+# Omit this input to keep the Kubernetes API private.
+cluster_endpoint_public_access_cidrs = ["203.0.113.7/32"]
+
+# Replace this ARN with your AWS CLI profile's permanent IAM user or role ARN.
+# Omit it to give Kubernetes admin to the Terraform deployment identity instead.
+cluster_operator_principal_arn = "arn:aws:iam::123456789012:role/platform/ClusterOperator"
