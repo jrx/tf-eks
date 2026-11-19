@@ -106,6 +106,12 @@ run "wrong_autoscaling_account" {
   expect_failures = [data.aws_iam_session_context.deployment]
 }
 
+run "wrong_control_plane_account" {
+  command = plan
+  variables { iam_role = "arn:aws:iam::987654321098:role/platform/EksControlPlane" }
+  expect_failures = [data.aws_iam_session_context.deployment]
+}
+
 run "session_operator" {
   command = plan
   variables { cluster_operator_principal_arn = "arn:aws:sts::123456789012:assumed-role/Operator/session" }

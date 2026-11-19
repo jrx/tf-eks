@@ -18,6 +18,11 @@ data "aws_iam_session_context" "deployment" {
       condition     = startswith(var.autoscaling_role, "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:")
       error_message = "Supply the default Auto Scaling service-linked role from the same AWS account and partition as the deployment."
     }
+
+    precondition {
+      condition     = startswith(var.iam_role, "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:")
+      error_message = "Supply the EKS control-plane role from the same AWS account and partition as the deployment."
+    }
   }
 }
 
